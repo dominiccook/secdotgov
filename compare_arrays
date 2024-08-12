@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#  This script takes two arrays as input and will output the elements
+#+ from the first array not found in the second.
+#  Put another way, given two sets, A and B, 
+#+ the output, C, will be the subset A n B'.
+#  (Arrays must be separated by linebreaks)
+
+# ==============================
+# --- INITIALIZE ERROR CODES ---
+# ==============================
+
+# error codes
+E_WRONG_ARGS=85 # Error code 85: Interpreted system call should be restarted.
+# error messages
+usage_message="Usage:$ `basename $0` [ARRAY] [ARRAY1]\n\
+  array[1]\n  array[2]\n  array[3]\n  .\n  .\n  .\n  array[n]\n\
+(Given array[i] is not in array1)\n"
+param_message="`basename $0`: wrong number of parameters\n"
+
+# =================================================================
+#                      --- COMPARE FUNCTION ---
+# Iterates through both arrays and finds elements not in the second
+# =================================================================
+compare ()\
+{
+    # check if both arrays were given
+    [ $# != 2 ] && printf "$param_message\n$usage_message"\
+        && exit $E_WRONG_ARGS
+    # Assign parameters to local variables
+    # [Arrays must be separated by linebreaks]
+    readarray -t array1 < <(echo "$1") 
+    readarray -t array2 < <(echo "$2")
+
+    for i in "${!array1[@]}";# open first array
+    do
+        declare found=0 # initialize counter
+        for j in "${!array2[@]}" # open second array
+        do
+            # if a match is found, update the counter
+            [[ "${array1[i]}" == "${array2[j]}"  ]] && ((++found))
+        done
+        [ $found -gt 0 ] || echo "${array1[i]}"
+        # if no match is found, print the element
+    done
+}
+
+# execute if sourced from another script
+[[ "${#BASH_SOURCE[@]}" -eq 1 ]] && compare "$@" && exit 0

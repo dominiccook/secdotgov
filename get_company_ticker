@@ -1,0 +1,56 @@
+# This script is intended to fetch a companies CIK lookup number for
+# the SEC filing system.
+#
+# Usage: ./get_company_ticker <company_name>
+# Searching for <company_name> CIK number...
+# <CIK-number>
+#
+# With grep you can store the CIK number for further use throughout
+# the data.sec.gov api.
+#!/usr/bin/env bash
+
+# Check if argument has been given
+if [ -z "$1" ]; then
+    echo "Usage: $0 <company_name>"
+    exit 1
+fi
+
+# Store argment in variable
+company_name=$1
+
+printf "Searching for "$company_name" CIK number..."
+
+# Use jq to fetch CIK numbers where the company contains <company_name>
+#
+# jq searches a file called company_tickers.json which is scraped 
+# from https://www.sec.gov
+cik=$(jq -r --arg company "$company_name" '
+  .[] | select(.title | ascii_downcase | contains($company | ascii_downcase)) | .cik_str' company_tickers.json)
+
+# If there's one match return CIK
+#
+# If there's more than one, find out which company the 
+# user is looking for.
+#
+if [ $(echo "$cik" | wc -l) -eq 1 ] ; then #if one company is found
+    printf "\n$cik\n"
+else #more than one was found, provide context to user
+    readarray -t companies < <(jq -r --arg company "$company_name" '.[] | select(.title | ascii_downcase | contains($company | ascii_downcase)) | .title' company_tickers.json)
+
+    printf "\n "${#companies[@]}" matches found...\n"
+
+    counter=0
+    for company in "${!companies[@]}" ;
+    do
+        printf "    ${company[@]}: ${companies[$company]} \n"
+    done
+
+    printf "\nWhich company are you looking for? "
+    read key
+
+    cik=$(jq -r --arg company "${companies[$key]}" '
+    .[] | select(.title | ascii_downcase | contains($company | ascii_downcase)) | .cik_str' company_tickers.json)
+
+    printf "${companies[$key]} CIK:\n  "$cik" \n"
+fi
+exit 0
